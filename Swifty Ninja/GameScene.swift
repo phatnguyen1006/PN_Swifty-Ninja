@@ -64,6 +64,9 @@ class GameScene: SKScene {
         if !isSwooshSoundActive {
             playSwooshSound()
         }
+        
+        // detect sliced enimies
+        detectSlicedEnimies(at: location)
     }
     
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -366,6 +369,59 @@ class GameScene: SKScene {
                 }
                 
                 nextSequenceQueued = true
+            }
+        }
+    }
+    
+    func detectSlicedEnimies(at location: CGPoint) {
+        let nodesAtPoint = nodes(at: location)
+        
+        for case let node as SKSpriteNode in nodesAtPoint {
+            if node.name == "enemy" {
+                // destroy enemy
+                /**
+                 1 Create a particle effect over the penguin.
+                 2 Clear its node name so that it can't be swiped repeatedly.
+                 3 Disable the isDynamic of its physics body so that it doesn't carry on falling.
+                 4 Make the penguin scale out and fade out at the same time.
+                 5 After making the penguin scale out and fade out, we should remove it from the scene.
+                 6 Add one to the player's score.
+                 7 Remove the enemy from our activeEnemies array.
+                 8 Play a sound so the player knows they hit the penguin.
+                */
+                
+                // 1
+                if let emitter = SKEmitterNode(fileNamed: "sliceHitEnemy") {
+                    emitter.position = node.position
+                    addChild(emitter)
+                }
+                
+                // 2 + 3: - isDynamic: fixed node on screen
+                node.name = ""
+                node.physicsBody?.isDynamic = false
+                
+                // 4: - create SKAction
+                let scaleOut = SKAction.scale(to: 0.001, duration: 0.2)
+                let fadeOut = SKAction.fadeOut(withDuration: 0.2)
+                let group = SKAction.group([scaleOut, fadeOut])
+                
+                // 5:
+                let seq = SKAction.sequence([group, .removeFromParent()])
+                node.run(seq)
+                
+                // 6
+                scores += 1
+                
+                // 7
+                if let index = activeEnemies.firstIndex(of: node) {
+                    activeEnemies.remove(at: index)
+                }
+                
+                // 8
+                run(SKAction.playSoundFileNamed("whack.caf", waitForCompletion: false))
+            }
+            else if node.name == "bomb" {
+                // destroy bomb
             }
         }
     }
