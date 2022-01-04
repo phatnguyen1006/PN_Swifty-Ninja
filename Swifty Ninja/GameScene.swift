@@ -19,6 +19,27 @@ enum SequenceType: CaseIterable {
 class GameScene: SKScene {
     
     var gameScores: SKLabelNode!
+    var gameOver: SKLabelNode = {
+        let gameOver = SKLabelNode(fontNamed: "Chalkduster")
+        gameOver.text = "Game Over"
+        gameOver.fontSize = 56
+        gameOver.position = CGPoint(x: 512, y: 384)
+        gameOver.zPosition = 2
+        gameOver.isHidden = true
+        return gameOver
+    }()
+    
+    var restartBtn: SKLabelNode = {
+        let restartBtn = SKLabelNode(fontNamed: "Chalkduster")
+        restartBtn.text = "restart"
+        restartBtn.name = "restart"
+        restartBtn.fontSize = 40
+        restartBtn.position = CGPoint(x: 512, y: 300)
+        restartBtn.zPosition = 2
+        restartBtn.isHidden = true
+        return restartBtn
+    }()
+    
     var bombSoundEffect: AVAudioPlayer?
     
     var livesImages = [SKSpriteNode]()
@@ -27,7 +48,6 @@ class GameScene: SKScene {
     var activeSliceFG: SKShapeNode!
     
     var activeSlicePoints = [CGPoint]()
-    var lives = 3
     var isSwooshSoundActive = false
     var scores = 0 {
         didSet {
@@ -35,15 +55,25 @@ class GameScene: SKScene {
         }
     }
     
+    var lives = 3
     var popupTime = 0.9
     var sequence = [SequenceType]()
     var sequencePosition = 0
     var chainDelay = 3.0
     var nextSequenceQueued = true
-    var isGameEnded = false
+    var isGameEnded = false {
+        didSet {
+            if isGameEnded {
+                changeShowGameOverOptionsBtn(true)
+            } else {
+                changeShowGameOverOptionsBtn(false)
+            }
+        }
+    }
     
     override func didMove(to view: SKView) {
         background()
+        gameOverOptions()
         physicWorld()
         
         // setup Game
@@ -80,8 +110,18 @@ class GameScene: SKScene {
         // remove all activeSlicePoints
         activeSlicePoints.removeAll()
         
-        // add new location array and show the slices
         let location = touch.location(in: self)
+        
+        if isGameEnded {
+            // check if touch inside restartBtn
+            let tappedNodes = nodes(at: location)
+            if tappedNodes.contains(restartBtn) {
+                // restart Game
+                restartGame()
+            }
+        }
+        
+        // add new location array and show the slices
         activeSlicePoints.append(location)
         
         // show slice
@@ -128,6 +168,11 @@ class GameScene: SKScene {
         addChild(background)
     }
     
+    func gameOverOptions() {
+        addChild(gameOver)
+        addChild(restartBtn)
+    }
+    
     func physicWorld() {
         physicsWorld.gravity = CGVector(dx: 0, dy: -6)
         physicsWorld.speed = 0.85
@@ -145,6 +190,39 @@ class GameScene: SKScene {
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
             [weak self] in self?.tossEnemies()
         }
+    }
+    
+    func restartGame() {
+        // restart status
+        isGameEnded = false
+        
+        // restart scores
+        for node in children {
+            if node.name == "enemy" || node.name == "bombContainer" {
+                node.removeFromParent()
+            }
+        }
+        activeEnemies.removeAll()
+        scores = 0
+        
+        
+        // restart the physic world
+        physicWorld()
+        resetConst()
+        
+        // restart the lives
+        livesImages[0].texture = SKTexture(imageNamed: "sliceLife")
+        livesImages[1].texture = SKTexture(imageNamed: "sliceLife")
+        livesImages[2].texture = SKTexture(imageNamed: "sliceLife")
+        
+        startGame()
+    }
+    
+    func resetConst() {
+        lives = 3
+        popupTime = 0.9
+        sequencePosition = 0
+        chainDelay = 3.0
     }
     
     func createScore() {
@@ -276,7 +354,7 @@ class GameScene: SKScene {
          3 Create a random X velocity (how far to move horizontally) that takes into account the enemy's position.
          4 Create a random Y velocity just to make things fly at different speeds.
          5 Give all enemies a circular physics body where the collisionBitMask is set to 0 so they don't collide.
-        */
+         */
         
         // 1
         let randomPosition = CGPoint(x: Int.random(in: 64...960), y: -128)
@@ -296,7 +374,7 @@ class GameScene: SKScene {
         } else {
             randomXVelocity = -Int.random(in: 8...15)
         }
-
+        
         // 4
         let randomYVelocity = Int.random(in: 24...32)
         
@@ -410,7 +488,7 @@ class GameScene: SKScene {
                  6 Add one to the player's score.
                  7 Remove the enemy from our activeEnemies array.
                  8 Play a sound so the player knows they hit the penguin.
-                */
+                 */
                 
                 // 1
                 if let emitter = SKEmitterNode(fileNamed: "sliceHitEnemy") {
@@ -448,12 +526,12 @@ class GameScene: SKScene {
                  1 The node called "bomb" is the bomb image, which is inside the bomb container. So, we need to reference the node's parent when looking up our position, changing the physics body, removing the node from the scene, and removing the node from our activeEnemies array..
                  2 I'm going to create a different particle effect for bombs than for penguins.
                  3 We end by calling the (as yet unwritten) method endGame().
-                */
+                 */
                 
                 guard let bombContainer = node.parent as? SKSpriteNode else { return }
                 
                 if let emitter = SKEmitterNode(fileNamed: "sliceHitBomb") {
-                    emitter.position = node.position
+                    emitter.position = bombContainer.position
                     addChild(emitter)
                 }
                 
@@ -479,11 +557,11 @@ class GameScene: SKScene {
     
     func subtractLife() {
         lives -= 1
-
+        
         run(SKAction.playSoundFileNamed("wrong.caf", waitForCompletion: false))
-
+        
         var life: SKSpriteNode
-
+        
         if lives == 2 {
             life = livesImages[0]
         } else if lives == 1 {
@@ -495,12 +573,24 @@ class GameScene: SKScene {
         
         /// Note how to using SKTexture to modify the contents of a sprite node without having to recreate it.
         life.texture = SKTexture(imageNamed: "sliceLifeGone")
-
+        
         life.xScale = 1.3
         life.yScale = 1.3
         life.run(SKAction.scale(to: 1, duration:0.1))
     }
     
+    func changeShowGameOverOptionsBtn(_ isShow: Bool) {
+        // Can have others btn in the future
+        
+        if isShow {
+            gameOver.isHidden = false
+            restartBtn.isHidden = false
+        }
+        else {
+            gameOver.isHidden = true
+            restartBtn.isHidden = true
+        }
+    }
     
     func endGame(triggeredByBomb: Bool) {
         if isGameEnded {
@@ -509,7 +599,9 @@ class GameScene: SKScene {
         
         isGameEnded = true
         physicsWorld.speed = 0
-        isUserInteractionEnabled =  false
+        // isUserInteractionEnabled =  false
+        // print(children.count)
+        // print("children: \(children)")
         
         bombSoundEffect?.stop()
         bombSoundEffect = nil
@@ -520,4 +612,5 @@ class GameScene: SKScene {
             livesImages[2].texture = SKTexture(imageNamed: "sliceLifeGone")
         }
     }
+    
 }
