@@ -10,5 +10,5 @@
 ## Illustration:
 
 <img src="image_2022-01-04_215251.png" alt="pic-1" width="40%"/>&nbsp;
-<img src="image_2022-01-04_215601.png" alt="pic-2" width="40%"/>&nbsp;&nbsp;
+<img src="image_2022-01-04_215601.png" alt="pic-2" width="40%"/>
 <br/>
