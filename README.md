@@ -3,7 +3,7 @@
 ## List
 + Slice to win
 + Avoid the Bomb
-+ Avoid miss 3 enemy
++ Avoid miss 3 enemies
 + Restart Game
 
 
