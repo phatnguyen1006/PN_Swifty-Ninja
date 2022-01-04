@@ -3,6 +3,12 @@
 ## List
 + Slice to win
 + Avoid the Bomb
++ Avoid miss 3 enemy
++ Restart Game
 
-<img width="40%" src="image_2022-01-04_215251.png" />
-<img width="40%" src="image_2022-01-04_215601.png" />
+
+## Illustration:
+
+<img src="image_2022-01-04_215251.png" alt="pic-1" width="40%"/>&nbsp;
+<img src="image_2022-01-04_215601.png" alt="pic-2" width="40%"/>&nbsp;&nbsp;
+<br/>
